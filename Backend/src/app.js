@@ -31,7 +31,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "ai-meeting-assistant-theta.vercel.app"
+      "https://ai-meeting-assistant-theta.vercel.app"
     ],
     credentials: true,
   })
