@@ -79,8 +79,14 @@ authRouter.post('/login', async(req,res) => {
                 process.env.JWT_SECRET
          );
             
-         res.cookie("token",token);
-         res.send("Login Successful");
+        
+       res.cookie("token", token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+});
+
+res.send("Login Successful");
 
 
 
@@ -100,12 +106,16 @@ authRouter.get('/profile',auth, async(req,res)  => {
        
 });
 
+
 authRouter.post("/logout", (req, res) => {
 
-    res.clearCookie("token");
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+  });
 
-    res.send("Logout Successful");
-
+  res.send("Logout Successful");
 });
 
 export default authRouter;
