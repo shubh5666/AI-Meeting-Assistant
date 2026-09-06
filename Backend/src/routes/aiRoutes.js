@@ -72,11 +72,28 @@ aiRouter.post(
             const summaryText = await createGroqChat([
                 {
                     role: "system",
-                    content: "You are an executive assistant. Generate a clear, well-structured, professional meeting summary."
+                    content: `You are an elite executive AI assistant.
+Generate a clean, clear, and highly readable meeting summary.
+
+Format your response strictly using this layout:
+### 📌 Overview
+A concise 2-3 sentence summary explaining the core purpose and context of the meeting.
+
+### 💬 Key Discussion Points
+- Clean bullet points explaining what each person said or discussed.
+- Focus on key information, topics, and context.
+
+### 🎯 Key Outcomes & Next Steps
+- Clear bullet points highlighting the conclusions, decisions, or immediate next steps.
+
+RULES:
+1. NEVER use markdown tables or pipe symbols (|).
+2. Do NOT add meta text like "Prepared by", "Date", "End of summary", or document headers.
+3. Keep the language simple, professional, and easily scannable.`
                 },
                 {
                     role: "user",
-                    content: `Summarize the following meeting transcript:\n\n${meeting.transcript}`
+                    content: `Meeting Transcript:\n\n${meeting.transcript}`
                 }
             ]);
 
@@ -113,11 +130,11 @@ aiRouter.post(
             const actionItemsText = await createGroqChat([
                 {
                     role: "system",
-                    content: "You are an executive assistant. Extract all actionable tasks from the meeting transcript as a bulleted list where each line starts with a dash (-)."
+                    content: "You are an executive assistant. Extract all actionable tasks from the meeting transcript as clean bullet points starting with a dash (-). RULES: Do not use tables or pipes (|). Do not add preamble or sign-off."
                 },
                 {
                     role: "user",
-                    content: `Analyze the following meeting transcript.\nExtract all actionable tasks as bullet points (- item).\nIf there are no tasks, return: - No action items found\n\nTranscript:\n\n${meeting.transcript}`
+                    content: `Extract all actionable tasks from this transcript:\n\n${meeting.transcript}`
                 }
             ]);
 
@@ -154,11 +171,11 @@ aiRouter.post(
             const decisionsText = await createGroqChat([
                 {
                     role: "system",
-                    content: "You are an executive assistant. Extract all strategic decisions agreed upon during the meeting as a bulleted list where each line starts with a dash (-)."
+                    content: "You are an executive assistant. Extract all strategic decisions agreed upon during the meeting as clean bullet points starting with a dash (-). RULES: Do not use tables or pipes (|). Do not add preamble or sign-off."
                 },
                 {
                     role: "user",
-                    content: `Extract decisions made in this meeting as bullet points (- item).\nIf there are no explicit decisions, return: - No strategic decisions recorded\n\nTranscript:\n\n${meeting.transcript}`
+                    content: `Extract all key decisions made in this meeting as bullet points (- item):\n\n${meeting.transcript}`
                 }
             ]);
 
@@ -195,11 +212,11 @@ aiRouter.post(
             const followUpText = await createGroqChat([
                 {
                     role: "system",
-                    content: "You are an executive assistant. Suggest concrete follow-up actions and schedule next steps based on the meeting transcript as a bulleted list where each line starts with a dash (-)."
+                    content: "You are an executive assistant. Suggest concrete follow-up actions and scheduling next steps as clean bullet points starting with a dash (-). RULES: Do not use tables or pipes (|). Do not add preamble or sign-off."
                 },
                 {
                     role: "user",
-                    content: `Suggest follow up actions and scheduling next steps based on this meeting as bullet points (- item).\nIf there are no follow-ups, return: - No follow-up items scheduled\n\nTranscript:\n\n${meeting.transcript}`
+                    content: `Suggest follow-up actions and scheduling next steps based on this meeting as bullet points (- item):\n\n${meeting.transcript}`
                 }
             ]);
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
+import FormattedSummary from "../components/FormattedSummary";
 import {
   getMeetingById,
   uploadAudio,
@@ -417,14 +418,11 @@ function MeetingDetails() {
                     background: "#fafbfc",
                     border: "1px solid #edf0f2",
                     borderRadius: "9px",
-                    padding: "14px",
+                    padding: "16px",
                     minHeight: "100px",
-                    fontSize: "12.5px",
-                    lineHeight: 1.55,
-                    color: meeting.summary ? "#24292e" : "#8a929a",
                   }}
                 >
-                  {meeting.summary || "No summary generated yet. Click 'Generate Summary' once transcript is ready."}
+                  <FormattedSummary summary={meeting.summary} />
                 </div>
               </div>
             </div>
