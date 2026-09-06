@@ -1,332 +1,562 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-
-import {getMeetingById,uploadAudio,} from "../services/meetingService";
-
-import { generateTranscript,generateSummary,generateActionItems,generateDecisions,generateFollowUps,} from "../services/aiService";
+import { useParams, Link } from "react-router-dom";
+import Sidebar from "../components/Sidebar";
+import Topbar from "../components/Topbar";
+import {
+  getMeetingById,
+  uploadAudio,
+} from "../services/meetingService";
+import {
+  generateTranscript,
+  generateSummary,
+  generateActionItems,
+  generateDecisions,
+  generateFollowUps,
+} from "../services/aiService";
 
 function MeetingDetails() {
   const { id } = useParams();
-
   const [meeting, setMeeting] = useState(null);
   const [audio, setAudio] = useState(null);
-const [message, setMessage] = useState("");
+  const [message, setMessage] = useState("");
+  const [actionLoading, setActionLoading] = useState("");
 
   useEffect(() => {
-  fetchMeeting();
-}, []);
+    fetchMeeting();
+  }, [id]);
 
-const fetchMeeting = async () => {
-  try {
-    const data = await getMeetingById(id);
-    setMeeting(data);
-  } catch (error) {
-    console.log(error);
-  }
-};
+  const fetchMeeting = async () => {
+    try {
+      const data = await getMeetingById(id);
+      setMeeting(data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const showToast = (msg) => {
+    setMessage(msg);
+    setTimeout(() => {
+      setMessage("");
+    }, 2500);
+  };
 
   const handleUpload = async () => {
+    if (!audio) {
+      showToast("Please select an audio file first");
+      return;
+    }
     try {
+      setActionLoading("upload");
       await uploadAudio(id, audio);
-
-      setMessage("Audio uploaded successfully");
-      setTimeout(() => {
-  setMessage("");
-}, 2000);
-
+      showToast("Audio uploaded successfully");
       fetchMeeting();
     } catch (error) {
       console.log(error);
-      setMessage("Upload Failed");
-setTimeout(() => {
-  setMessage("");
-}, 2000);
+      showToast("Upload failed");
+    } finally {
+      setActionLoading("");
     }
   };
 
   const handleTranscript = async () => {
     try {
+      setActionLoading("transcript");
       await generateTranscript(id);
-
-      setMessage("Transcript Generated");
-      
-      setTimeout(() => {
-  setMessage("");
-}, 2000);
-
+      showToast("Transcript generated successfully");
       fetchMeeting();
     } catch (error) {
       console.log(error);
-      setMessage("Transcript Generation Failed");
-
-setTimeout(() => {
-  setMessage("");
-}, 2000);
+      showToast("Transcript generation failed");
+    } finally {
+      setActionLoading("");
     }
   };
 
   const handleSummary = async () => {
-  try {
-    await generateSummary(id);
+    try {
+      setActionLoading("summary");
+      await generateSummary(id);
+      showToast("Summary generated successfully");
+      fetchMeeting();
+    } catch (error) {
+      console.log(error);
+      showToast("Summary generation failed");
+    } finally {
+      setActionLoading("");
+    }
+  };
 
-    setMessage("Summary Generated");
-    setTimeout(() => {
-  setMessage("");
-}, 2000);
+  const handleActionItems = async () => {
+    try {
+      setActionLoading("actionItems");
+      await generateActionItems(id);
+      showToast("Action items generated successfully");
+      fetchMeeting();
+    } catch (error) {
+      console.log(error);
+      showToast("Action items generation failed");
+    } finally {
+      setActionLoading("");
+    }
+  };
 
-    fetchMeeting();
-  } catch (error) {
-    console.log(error);
-   setMessage("Summary Generation Failed");
+  const handleDecisions = async () => {
+    try {
+      setActionLoading("decisions");
+      await generateDecisions(id);
+      showToast("Decisions generated successfully");
+      fetchMeeting();
+    } catch (error) {
+      console.log(error);
+      showToast("Decision extraction failed");
+    } finally {
+      setActionLoading("");
+    }
+  };
 
-setTimeout(() => {
-  setMessage("");
-}, 2000);
-  }
-};
-
-const handleActionItems = async () => {
-  try {
-    await generateActionItems(id);
-
-    setMessage("Action Items Generated");
-    setTimeout(() => {
-  setMessage("");
-}, 2000);
-
-    fetchMeeting();
-  } catch (error) {
-    console.log(error);
-    setMessage("Action Generation  Failed");
-
-setTimeout(() => {
-  setMessage("");
-}, 2000);
-  }
-};
-
-const handleDecisions = async () => {
-  try {
-    await generateDecisions(id);
-
-    setMessage("Decisions Generated");
-    setTimeout(() => {
-  setMessage("");
-}, 2000);
-
-    fetchMeeting();
-  } catch (error) {
-    console.log(error);
-    setMessage("Decision Generation Failed");
-
-setTimeout(() => {
-  setMessage("");
-}, 2000);
-  }
-};
-
-const handleFollowUps = async () => {
-  try {
-    await generateFollowUps(id);
-
-    setMessage("Follow Ups Generated");
-    setTimeout(() => {
-  setMessage("");
-}, 2000);
-
-    fetchMeeting();
-  } catch (error) {
-    console.log(error);
-   setMessage("Followups Failed");
-
-setTimeout(() => {
-  setMessage("");
-}, 2000);
-  }
-};
+  const handleFollowUps = async () => {
+    try {
+      setActionLoading("followUps");
+      await generateFollowUps(id);
+      showToast("Follow-ups generated successfully");
+      fetchMeeting();
+    } catch (error) {
+      console.log(error);
+      showToast("Follow-up generation failed");
+    } finally {
+      setActionLoading("");
+    }
+  };
 
   if (!meeting) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        Loading...
+      <div className="app-shell flex">
+        <Sidebar />
+        <div className="app-main" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ textAlign: "center" }}>
+            <span className="status-dot-active" style={{ marginBottom: "12px" }}></span>
+            <div style={{ fontSize: "13px", fontWeight: 700, color: "#111111" }}>Loading meeting session...</div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-  <div className="min-h-screen bg-black text-white p-8">
-
-    {message && (
-      <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50">
-        {message}
-      </div>
-    )}     
-
-      <h1 className="text-4xl font-bold mb-3">
-        {meeting.title}
-      </h1>
-
-      <p className="text-zinc-400 mb-8">
-        {meeting.description}
-      </p>
-
-      {/* Upload Audio */}
-
-      <div className="bg-zinc-900 p-6 rounded-xl mb-6">
-
-        <h2 className="text-2xl font-bold mb-4">
-          Upload Audio
-        </h2>
-
-        <input
-          type="file"
-          accept="audio/*"
-          onChange={(e) => setAudio(e.target.files[0])}
-          className="mb-4"
-        />
-
-        <br />
-
-        <button
-          onClick={handleUpload}
-          className="bg-purple-600 px-5 py-3 rounded-lg"
-        >
-          Upload Audio
-        </button>
-
-      </div>
-
-      {/* Transcript */}
-
-      <div className="bg-zinc-900 p-6 rounded-xl mb-6">
-
-        <div className="flex justify-between items-center mb-4">
-
-          <h2 className="text-2xl font-bold">
-            Transcript
-          </h2>
-
-          <button
-            onClick={handleTranscript}
-            className="bg-blue-600 px-4 py-2 rounded-lg"
-          >
-            Generate Transcript
-          </button>
-
+    <div className="app-shell flex">
+      {message && (
+        <div className="toast-notice">
+          <span className="status-dot-active"></span>
+          <span>{message}</span>
         </div>
+      )}
 
-        <p>
-          {meeting.transcript || "No transcript generated yet"}
-        </p>
+      <Sidebar />
 
+      <div className="app-main">
+        <Topbar title="Meeting Details" subtitle="SESSION DEEP-DIVE" />
+
+        <div className="app-container">
+          {/* Back Navigation Breadcrumb */}
+          <div style={{ marginBottom: "18px" }}>
+            <Link
+              to="/meetings"
+              style={{
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#7b8490",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              ← Back to Meetings
+            </Link>
+          </div>
+
+          {/* Session Overview Card */}
+          <div className="card-standard" style={{ padding: "24px 26px", marginBottom: "18px" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: "16px" }}>
+              <div style={{ maxWidth: "700px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                  <span className="eyebrow">
+                    SESSION ID #{meeting._id ? meeting._id.slice(-6).toUpperCase() : "SYNC"}
+                  </span>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "2px 8px",
+                      borderRadius: "12px",
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      color: "#059669",
+                      background: "#ecfdf5",
+                      border: "1px solid #ccefe0",
+                    }}
+                  >
+                    <span className="status-dot-active" style={{ width: "5px", height: "5px" }}></span>
+                    Active Workspace
+                  </span>
+                </div>
+
+                <h1 className="heading-h1" style={{ margin: "0 0 8px 0", fontSize: "24px" }}>
+                  {meeting.title}
+                </h1>
+
+                <p style={{ fontSize: "13px", color: "#68727d", margin: 0, lineHeight: 1.5 }}>
+                  {meeting.description || "No specific meeting description provided."}
+                </p>
+              </div>
+
+              <div style={{ textAlign: "right" }}>
+                <span style={{ fontSize: "11px", color: "#8a929a", display: "block" }}>Created On</span>
+                <span style={{ fontSize: "12px", fontWeight: 750, color: "#111111" }}>
+                  {meeting.createdAt
+                    ? new Date(meeting.createdAt).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    : "Recent"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Two-Column Detail Layout */}
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "16px" }}>
+            {/* Left Column: Audio & Transcript */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Audio Upload Card */}
+              <div className="card-standard" style={{ padding: "20px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                  <div>
+                    <span className="eyebrow">INPUT SOURCE</span>
+                    <h2 className="heading-h2" style={{ margin: "2px 0 0 0" }}>
+                      Audio Recording
+                    </h2>
+                  </div>
+                  <div
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
+                      background: "#f0f2f4",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#111111",
+                    }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="22" />
+                    </svg>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    border: "1px dashed #cbd0d5",
+                    borderRadius: "10px",
+                    padding: "16px",
+                    textAlign: "center",
+                    background: "#fafbfc",
+                    marginBottom: "14px",
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    id="audio-upload-input"
+                    onChange={(e) => setAudio(e.target.files[0])}
+                    style={{ display: "none" }}
+                  />
+                  <label
+                    htmlFor="audio-upload-input"
+                    style={{
+                      display: "inline-block",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      color: "#111111",
+                    }}
+                  >
+                    {audio ? audio.name : "Click to browse or drop audio file (.mp3, .wav, .m4a)"}
+                  </label>
+                  {audio && (
+                    <span style={{ display: "block", fontSize: "11px", color: "#059669", marginTop: "4px" }}>
+                      File selected: {(audio.size / (1024 * 1024)).toFixed(2)} MB
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleUpload}
+                  disabled={actionLoading === "upload"}
+                  className="btn-primary"
+                  style={{ width: "100%" }}
+                >
+                  {actionLoading === "upload" ? "Uploading audio..." : "Upload Audio File"}
+                </button>
+              </div>
+
+              {/* Transcript Card */}
+              <div className="card-standard" style={{ padding: "20px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                  <div>
+                    <span className="eyebrow">AUTOMATED SPEECH RECOGNITION</span>
+                    <h2 className="heading-h2" style={{ margin: "2px 0 0 0" }}>
+                      Transcript
+                    </h2>
+                  </div>
+
+                  <button
+                    onClick={handleTranscript}
+                    disabled={actionLoading === "transcript"}
+                    className="btn-secondary"
+                  >
+                    {actionLoading === "transcript" ? "Generating..." : "Generate Transcript"}
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    background: "#fafbfc",
+                    border: "1px solid #edf0f2",
+                    borderRadius: "9px",
+                    padding: "14px",
+                    minHeight: "130px",
+                    maxHeight: "340px",
+                    overflowY: "auto",
+                    fontSize: "12.5px",
+                    lineHeight: 1.55,
+                    color: meeting.transcript ? "#24292e" : "#8a929a",
+                  }}
+                >
+                  {meeting.transcript || "No transcript generated yet. Upload audio and click 'Generate Transcript'."}
+                </div>
+              </div>
+
+              {/* Summary Card */}
+              <div className="card-standard" style={{ padding: "20px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                  <div>
+                    <span className="eyebrow">AI SYNTHESIS</span>
+                    <h2 className="heading-h2" style={{ margin: "2px 0 0 0" }}>
+                      Executive Summary
+                    </h2>
+                  </div>
+
+                  <button
+                    onClick={handleSummary}
+                    disabled={actionLoading === "summary"}
+                    className="btn-secondary"
+                  >
+                    {actionLoading === "summary" ? "Generating..." : "Generate Summary"}
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    background: "#fafbfc",
+                    border: "1px solid #edf0f2",
+                    borderRadius: "9px",
+                    padding: "14px",
+                    minHeight: "100px",
+                    fontSize: "12.5px",
+                    lineHeight: 1.55,
+                    color: meeting.summary ? "#24292e" : "#8a929a",
+                  }}
+                >
+                  {meeting.summary || "No summary generated yet. Click 'Generate Summary' once transcript is ready."}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Action Items, Decisions, Follow-Ups */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Action Items Card */}
+              <div className="card-standard" style={{ padding: "20px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                  <div>
+                    <span className="eyebrow">EXECUTION PLAN</span>
+                    <h2 className="heading-h2" style={{ margin: "2px 0 0 0" }}>
+                      Action Items
+                    </h2>
+                  </div>
+
+                  <button
+                    onClick={handleActionItems}
+                    disabled={actionLoading === "actionItems"}
+                    className="btn-secondary"
+                  >
+                    {actionLoading === "actionItems" ? "Extracting..." : "Extract Actions"}
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    background: "#fafbfc",
+                    border: "1px solid #edf0f2",
+                    borderRadius: "9px",
+                    padding: "14px",
+                    minHeight: "110px",
+                  }}
+                >
+                  {meeting.actionItems && meeting.actionItems.length > 0 ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {meeting.actionItems.map((item, index) => (
+                        <div key={index} style={{ display: "flex", alignItems: "flex-start", gap: "8px", fontSize: "12.5px" }}>
+                          <span
+                            style={{
+                              width: "16px",
+                              height: "16px",
+                              borderRadius: "4px",
+                              background: "#ecfdf5",
+                              border: "1px solid #ccefe0",
+                              color: "#059669",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "10px",
+                              fontWeight: 800,
+                              flexShrink: 0,
+                              marginTop: "2px",
+                            }}
+                          >
+                            ✓
+                          </span>
+                          <span style={{ color: "#24292e" }}>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: "12px", color: "#8a929a" }}>
+                      No action items extracted yet.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Decisions Card */}
+              <div className="card-standard" style={{ padding: "20px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                  <div>
+                    <span className="eyebrow">STRATEGIC ALIGNMENT</span>
+                    <h2 className="heading-h2" style={{ margin: "2px 0 0 0" }}>
+                      Key Decisions
+                    </h2>
+                  </div>
+
+                  <button
+                    onClick={handleDecisions}
+                    disabled={actionLoading === "decisions"}
+                    className="btn-secondary"
+                  >
+                    {actionLoading === "decisions" ? "Extracting..." : "Log Decisions"}
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    background: "#fafbfc",
+                    border: "1px solid #edf0f2",
+                    borderRadius: "9px",
+                    padding: "14px",
+                    minHeight: "100px",
+                  }}
+                >
+                  {meeting.decisions && meeting.decisions.length > 0 ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {meeting.decisions.map((item, index) => (
+                        <div key={index} style={{ display: "flex", alignItems: "flex-start", gap: "8px", fontSize: "12.5px" }}>
+                          <span
+                            style={{
+                              width: "7px",
+                              height: "7px",
+                              borderRadius: "50%",
+                              background: "#111111",
+                              marginTop: "6px",
+                              flexShrink: 0,
+                            }}
+                          />
+                          <span style={{ color: "#24292e" }}>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: "12px", color: "#8a929a" }}>
+                      No strategic decisions recorded yet.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Follow Ups Card */}
+              <div className="card-standard" style={{ padding: "20px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                  <div>
+                    <span className="eyebrow">NEXT STEPS</span>
+                    <h2 className="heading-h2" style={{ margin: "2px 0 0 0" }}>
+                      Follow-Ups & Schedules
+                    </h2>
+                  </div>
+
+                  <button
+                    onClick={handleFollowUps}
+                    disabled={actionLoading === "followUps"}
+                    className="btn-secondary"
+                  >
+                    {actionLoading === "followUps" ? "Extracting..." : "Extract Follow-Ups"}
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    background: "#fafbfc",
+                    border: "1px solid #edf0f2",
+                    borderRadius: "9px",
+                    padding: "14px",
+                    minHeight: "100px",
+                  }}
+                >
+                  {meeting.followUps && meeting.followUps.length > 0 ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {meeting.followUps.map((item, index) => (
+                        <div key={index} style={{ display: "flex", alignItems: "flex-start", gap: "8px", fontSize: "12.5px" }}>
+                          <span
+                            style={{
+                              width: "7px",
+                              height: "7px",
+                              borderRadius: "50%",
+                              background: "#059669",
+                              marginTop: "6px",
+                              flexShrink: 0,
+                            }}
+                          />
+                          <span style={{ color: "#24292e" }}>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: "12px", color: "#8a929a" }}>
+                      No follow-up items scheduled yet.
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-
-      {/* Summary */}
-
-     <div className="bg-zinc-900 p-6 rounded-xl mb-6">
-
-  <div className="flex justify-between items-center mb-4">
-
-    <h2 className="text-2xl font-bold">
-      Summary
-    </h2>
-
-    <button
-      onClick={handleSummary}
-      className="bg-green-600 px-4 py-2 rounded-lg"
-    >
-      Generate Summary
-    </button>
-
-  </div>
-
-  <p>
-    {meeting.summary || "No summary generated yet"}
-  </p>
-
-</div>
-
-      {/* Action Items */}
-
-     <div className="bg-zinc-900 p-6 rounded-xl mb-6">
-
-  <div className="flex justify-between items-center mb-4">
-
-    <h2 className="text-2xl font-bold">
-      Action Items
-    </h2>
-
-    <button
-      onClick={handleActionItems}
-      className="bg-yellow-600 px-4 py-2 rounded-lg"
-    >
-      Generate Action Items
-    </button>
-
-  </div>
-
-  <ul>
-    {meeting.actionItems?.map((item, index) => (
-      <li key={index}>• {item}</li>
-    ))}
-  </ul>
-
-</div>
-
-      {/* Decisions */}
-
-      <div className="bg-zinc-900 p-6 rounded-xl mb-6">
-
-       <div className="flex justify-between items-center mb-4">
-
-  <h2 className="text-2xl font-bold">
-    Decisions
-  </h2>
-
-  <button
-    onClick={handleDecisions}
-    className="bg-red-600 px-4 py-2 rounded-lg"
-  >
-    Generate Decisions
-  </button>
-
-</div>
-
-        <ul>
-          {meeting.decisions?.map((item, index) => (
-            <li key={index}>• {item}</li>
-          ))}
-        </ul>
-
-      </div>
-
-      {/* Follow Ups */}
-
-<div className="bg-zinc-900 p-6 rounded-xl">
-
-  <div className="flex justify-between items-center mb-4">
-
-    <h2 className="text-2xl font-bold">
-      Follow Ups
-    </h2>
-
-    <button
-      onClick={handleFollowUps}
-      className="bg-purple-600 px-4 py-2 rounded-lg"
-    >
-      Generate Follow Ups
-    </button>
-
-  </div>
-
-  <ul>
-    {meeting.followUps?.map((item, index) => (
-      <li key={index}>• {item}</li>
-    ))}
-  </ul>
-
-</div>
-</div>
+    </div>
   );
 }
 
