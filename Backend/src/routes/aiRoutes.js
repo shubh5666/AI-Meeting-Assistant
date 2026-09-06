@@ -4,307 +4,216 @@ import auth from "../middleware/auth.js";
 
 import fs from "fs";
 import client from "../services/assemblyai.js";
-import groq from "../services/groq.js";
+import { createGroqChat } from "../services/groq.js";
 
 const aiRouter = express.Router();
 
-//transcriber
+// Helper to clean bullet points into neat arrays
+const parseBulletPoints = (text) => {
+    if (!text) return [];
+    return text
+        .split("\n")
+        .map(item => item.trim())
+        .filter(item => item.length > 0)
+        .map(item => item.replace(/^[-*•\d\.\)\s]+/, "").trim())
+        .filter(item => item.length > 0 && !item.toLowerCase().startsWith("transcript:"));
+};
+
+// Transcriber
 aiRouter.post(
     "/meetings/:id/transcribe",
     auth,
-    async(req,res) => {
+    async (req, res) => {
+        try {
+            const meeting = await Meeting.findById(req.params.id);
 
-        try{
-
-            const meeting = await Meeting.findById(
-                req.params.id
-            );
-
-            if(!meeting){
-                return res.status(404).send(
-                    "Meeting not found"
-                );
+            if (!meeting) {
+                return res.status(404).send("Meeting not found");
             }
 
-             
-            const transcript =
-                await client.transcripts.transcribe({
-                    audio: fs.createReadStream(meeting.audioFile)
-                });
+            if (!meeting.audioFile || !fs.existsSync(meeting.audioFile)) {
+                return res.status(400).send("Audio file not found on server. Please re-upload audio.");
+            }
 
-            meeting.transcript =
-                transcript.text;
-                
+            const transcript = await client.transcripts.transcribe({
+                audio: fs.createReadStream(meeting.audioFile)
+            });
 
+            meeting.transcript = transcript.text || "";
             await meeting.save();
 
             res.send({
                 message: "Transcript generated",
                 transcript: meeting.transcript
             });
-
-        }catch(err){
-
-            console.log(err);
-
-            res.status(500).send(
-                "Something went wrong"
-            );
+        } catch (err) {
+            console.error("Transcribe error:", err);
+            res.status(500).send(err.message || "Failed to transcribe audio");
         }
-
     }
 );
 
-
-// summary
+// Executive Summary
 aiRouter.post(
     "/meetings/:id/summary",
     auth,
-    async(req,res) => {
+    async (req, res) => {
+        try {
+            const meeting = await Meeting.findById(req.params.id);
 
-        try{
-
-            const meeting = await Meeting.findById(
-                req.params.id
-            );
-
-            if(!meeting){
-                return res.status(404).send(
-                    "Meeting not found"
-                );
+            if (!meeting) {
+                return res.status(404).send("Meeting not found");
             }
 
-            const completion =
-            await groq.chat.completions.create({
-                messages: [
-                    {
-                        role: "user",
-                        content: `Summarize the following meeting transcript:
+            if (!meeting.transcript || !meeting.transcript.trim()) {
+                return res.status(400).send("Transcript not found. Please upload audio and generate transcript first.");
+            }
 
-${meeting.transcript}`
-                    }
-                ],
-                model: "llama-3.3-70b-versatile"
-            });
+            const summaryText = await createGroqChat([
+                {
+                    role: "system",
+                    content: "You are an executive assistant. Generate a clear, well-structured, professional meeting summary."
+                },
+                {
+                    role: "user",
+                    content: `Summarize the following meeting transcript:\n\n${meeting.transcript}`
+                }
+            ]);
 
-            meeting.summary =
-            completion.choices[0].message.content;
-
+            meeting.summary = summaryText;
             await meeting.save();
 
             res.send({
                 message: "Summary generated",
                 summary: meeting.summary
             });
-
-        }catch(err){
-
-            console.log(err);
-
-            res.status(500).send(
-                "Something went wrong"
-            );
+        } catch (err) {
+            console.error("Summary error:", err);
+            res.status(500).send(err.message || "Failed to generate summary");
         }
-
     }
 );
 
-
- // action items
+// Action Items
 aiRouter.post(
     "/meetings/:id/action-items",
     auth,
     async (req, res) => {
-
         try {
-
-            const meeting = await Meeting.findById(
-                req.params.id
-            );
+            const meeting = await Meeting.findById(req.params.id);
 
             if (!meeting) {
-                return res.status(404).send(
-                    "Meeting not found"
-                );
+                return res.status(404).send("Meeting not found");
             }
 
-            const completion =
-                await groq.chat.completions.create({
-                    messages: [
-                        {
-                            role: "user",
-                            content: `Analyze the following meeting transcript.
-                           Extract all actionable tasks.
-                            If there are no tasks, return:
-                             No action items found
+            if (!meeting.transcript || !meeting.transcript.trim()) {
+                return res.status(400).send("Transcript not found. Please upload audio and generate transcript first.");
+            }
 
-                   Transcript:
+            const actionItemsText = await createGroqChat([
+                {
+                    role: "system",
+                    content: "You are an executive assistant. Extract all actionable tasks from the meeting transcript as a bulleted list where each line starts with a dash (-)."
+                },
+                {
+                    role: "user",
+                    content: `Analyze the following meeting transcript.\nExtract all actionable tasks as bullet points (- item).\nIf there are no tasks, return: - No action items found\n\nTranscript:\n\n${meeting.transcript}`
+                }
+            ]);
 
-                ${meeting.transcript}`
-                        }
-                    ],
-                    model: "llama-3.3-70b-versatile"
-                });
-
-            const actionItemsText =
-                completion.choices[0].message.content;
-
-            meeting.actionItems =
-                actionItemsText
-                    .split("\n")
-                    .map(item =>
-                        item
-                            .replace("*", "")
-                            .replace("-", "")
-                            .trim()
-                    )
-                    .filter(item => item !== "");
-
+            meeting.actionItems = parseBulletPoints(actionItemsText);
             await meeting.save();
 
             res.send({
                 message: "Action items generated",
                 actionItems: meeting.actionItems
             });
-
         } catch (err) {
-
-            console.log(err);
-
-            res.status(500).send(
-                "Something went wrong"
-            );
+            console.error("Action items error:", err);
+            res.status(500).send(err.message || "Failed to generate action items");
         }
-
     }
 );
 
-
-// decisions
+// Key Decisions
 aiRouter.post(
     "/meetings/:id/decisions",
     auth,
     async (req, res) => {
-
         try {
-
-            const meeting = await Meeting.findById(
-                req.params.id
-            );
+            const meeting = await Meeting.findById(req.params.id);
 
             if (!meeting) {
-                return res.status(404).send(
-                    "Meeting not found"
-                );
+                return res.status(404).send("Meeting not found");
             }
 
-            const completion =
-                await groq.chat.completions.create({
-                    messages: [
-                        {
-                            role: "user",
-                            content: `Extract decisions made in this meeting.
+            if (!meeting.transcript || !meeting.transcript.trim()) {
+                return res.status(400).send("Transcript not found. Please upload audio and generate transcript first.");
+            }
 
-${meeting.transcript}`
-                        }
-                    ],
-                    model: "llama-3.3-70b-versatile"
-                });
+            const decisionsText = await createGroqChat([
+                {
+                    role: "system",
+                    content: "You are an executive assistant. Extract all strategic decisions agreed upon during the meeting as a bulleted list where each line starts with a dash (-)."
+                },
+                {
+                    role: "user",
+                    content: `Extract decisions made in this meeting as bullet points (- item).\nIf there are no explicit decisions, return: - No strategic decisions recorded\n\nTranscript:\n\n${meeting.transcript}`
+                }
+            ]);
 
-            const decisionsText =
-                completion.choices[0].message.content;
-
-            meeting.decisions =
-                decisionsText
-                    .split("\n")
-                    .map(item =>
-                        item
-                            .replace("*", "")
-                            .replace("-", "")
-                            .trim()
-                    )
-                    .filter(item => item !== "");
-
+            meeting.decisions = parseBulletPoints(decisionsText);
             await meeting.save();
 
             res.send({
                 message: "Decisions generated",
                 decisions: meeting.decisions
             });
-
         } catch (err) {
-
-            console.log(err);
-
-            res.status(500).send(
-                "Something went wrong"
-            );
+            console.error("Decisions error:", err);
+            res.status(500).send(err.message || "Failed to extract decisions");
         }
-
     }
 );
 
-// followups
+// Follow-ups & Schedules
 aiRouter.post(
     "/meetings/:id/follow-ups",
     auth,
     async (req, res) => {
-
         try {
-
-            const meeting = await Meeting.findById(
-                req.params.id
-            );
+            const meeting = await Meeting.findById(req.params.id);
 
             if (!meeting) {
-                return res.status(404).send(
-                    "Meeting not found"
-                );
+                return res.status(404).send("Meeting not found");
             }
 
-            const completion =
-                await groq.chat.completions.create({
-                    messages: [
-                        {
-                            role: "user",
-                            content: `Suggest follow up actions based on this meeting.
+            if (!meeting.transcript || !meeting.transcript.trim()) {
+                return res.status(400).send("Transcript not found. Please upload audio and generate transcript first.");
+            }
 
-${meeting.transcript}`
-                        }
-                    ],
-                    model: "llama-3.3-70b-versatile"
-                });
+            const followUpText = await createGroqChat([
+                {
+                    role: "system",
+                    content: "You are an executive assistant. Suggest concrete follow-up actions and schedule next steps based on the meeting transcript as a bulleted list where each line starts with a dash (-)."
+                },
+                {
+                    role: "user",
+                    content: `Suggest follow up actions and scheduling next steps based on this meeting as bullet points (- item).\nIf there are no follow-ups, return: - No follow-up items scheduled\n\nTranscript:\n\n${meeting.transcript}`
+                }
+            ]);
 
-            const followUpText =
-                completion.choices[0].message.content;
-
-            meeting.followUps =
-                followUpText
-                    .split("\n")
-                    .map(item =>
-                        item
-                            .replace("*", "")
-                            .replace("-", "")
-                            .trim()
-                    )
-                    .filter(item => item !== "");
-
+            meeting.followUps = parseBulletPoints(followUpText);
             await meeting.save();
 
             res.send({
                 message: "Follow ups generated",
                 followUps: meeting.followUps
             });
-
         } catch (err) {
-
-            console.log(err);
-
-            res.status(500).send(
-                "Something went wrong"
-            );
+            console.error("Follow-ups error:", err);
+            res.status(500).send(err.message || "Failed to extract follow-ups");
         }
-
     }
 );
 

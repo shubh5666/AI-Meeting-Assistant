@@ -85,7 +85,10 @@ function MeetingDetails() {
       fetchMeeting();
     } catch (error) {
       console.log(error);
-      showToast("Summary generation failed");
+      const errMsg =
+        error.response?.data?.message ||
+        (typeof error.response?.data === "string" ? error.response.data : "Summary generation failed");
+      showToast(errMsg);
     } finally {
       setActionLoading("");
     }
@@ -99,7 +102,10 @@ function MeetingDetails() {
       fetchMeeting();
     } catch (error) {
       console.log(error);
-      showToast("Action items generation failed");
+      const errMsg =
+        error.response?.data?.message ||
+        (typeof error.response?.data === "string" ? error.response.data : "Action items generation failed");
+      showToast(errMsg);
     } finally {
       setActionLoading("");
     }
@@ -113,7 +119,10 @@ function MeetingDetails() {
       fetchMeeting();
     } catch (error) {
       console.log(error);
-      showToast("Decision extraction failed");
+      const errMsg =
+        error.response?.data?.message ||
+        (typeof error.response?.data === "string" ? error.response.data : "Decision extraction failed");
+      showToast(errMsg);
     } finally {
       setActionLoading("");
     }
@@ -127,7 +136,10 @@ function MeetingDetails() {
       fetchMeeting();
     } catch (error) {
       console.log(error);
-      showToast("Follow-up generation failed");
+      const errMsg =
+        error.response?.data?.message ||
+        (typeof error.response?.data === "string" ? error.response.data : "Follow-up generation failed");
+      showToast(errMsg);
     } finally {
       setActionLoading("");
     }
