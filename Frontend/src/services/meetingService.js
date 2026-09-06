@@ -24,7 +24,12 @@ export const uploadAudio = async (id, file) => {
 
   const response = await api.post(
     `/meetings/${id}/upload`,
-    formData
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
   );
 
   return response.data;

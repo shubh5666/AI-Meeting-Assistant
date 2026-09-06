@@ -125,44 +125,45 @@ meetingRouter.post('/meetings', auth,async(req,res) => {
 
 
   // upload audio
-      meetingRouter.post('/meetings/:id/upload',auth,
-    upload.single('audio'),
-    async(req,res) => {
+  meetingRouter.post(
+    '/meetings/:id/upload',
+    auth,
+    (req, res, next) => {
+      upload.single('audio')(req, res, (err) => {
+        if (err) {
+          console.error("Multer error during upload:", err);
+          return res.status(400).send(err.message || "File upload error");
+        }
+        next();
+      });
+    },
+    async (req, res) => {
+      try {
+        const meeting = await Meeting.findById(req.params.id);
 
-        try{
-
-            const meeting = await Meeting.findById(
-                req.params.id
-            );
-
-            if(!meeting){
-                return res.status(404).send(
-                    "Meeting not found"
-                );
-            }
-
-
-            console.log(req.file);
-            meeting.audioFile = req.file.path;
-
-            await meeting.save();
-
-            res.send({
-                message: "Audio uploaded successfully",
-                filePath: req.file.path
-            });
-
-        }catch(err){
-
-            console.log(err);
-
-            res.status(500).send(
-                "Something went wrong"
-            );
+        if (!meeting) {
+          return res.status(404).send("Meeting not found");
         }
 
+        if (!req.file) {
+          return res.status(400).send("No audio file provided");
+        }
+
+        console.log("Audio file saved:", req.file);
+        meeting.audioFile = req.file.path;
+
+        await meeting.save();
+
+        res.send({
+          message: "Audio uploaded successfully",
+          filePath: req.file.path
+        });
+      } catch (err) {
+        console.error("Upload error:", err);
+        res.status(500).send("Something went wrong");
+      }
     }
-);
+  );
 
 
 

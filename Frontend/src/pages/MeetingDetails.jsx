@@ -50,10 +50,14 @@ function MeetingDetails() {
       setActionLoading("upload");
       await uploadAudio(id, audio);
       showToast("Audio uploaded successfully");
+      setAudio(null);
       fetchMeeting();
     } catch (error) {
       console.log(error);
-      showToast("Upload failed");
+      const errMsg =
+        error.response?.data?.message ||
+        (typeof error.response?.data === "string" ? error.response.data : "Upload failed");
+      showToast(errMsg);
     } finally {
       setActionLoading("");
     }
@@ -261,47 +265,80 @@ function MeetingDetails() {
                   </div>
                 </div>
 
+                {meeting.audioFile && (
+                  <div
+                    style={{
+                      background: "#ecfdf5",
+                      border: "1px solid #a7f3d0",
+                      borderRadius: "8px",
+                      padding: "10px 14px",
+                      marginBottom: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <span className="status-dot-active" style={{ width: "6px", height: "6px" }}></span>
+                    <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#059669" }}>
+                      Audio File Attached ({meeting.audioFile.split(/[\/\\]/).pop()})
+                    </span>
+                  </div>
+                )}
+
                 <div
+                  onClick={() => document.getElementById("audio-upload-input")?.click()}
                   style={{
-                    border: "1px dashed #cbd0d5",
+                    border: "1px dashed #cbd5e1",
                     borderRadius: "10px",
-                    padding: "16px",
+                    padding: "18px 14px",
                     textAlign: "center",
-                    background: "#fafbfc",
+                    background: audio ? "#f0fdf4" : "#f8fafc",
                     marginBottom: "14px",
+                    cursor: "pointer",
+                    transition: "all 140ms ease",
                   }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#6366f1")}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#cbd5e1")}
                 >
                   <input
                     type="file"
-                    accept="audio/*"
+                    accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac"
                     id="audio-upload-input"
-                    onChange={(e) => setAudio(e.target.files[0])}
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setAudio(e.target.files[0]);
+                      }
+                    }}
                     style={{ display: "none" }}
                   />
-                  <label
-                    htmlFor="audio-upload-input"
-                    style={{
-                      display: "inline-block",
-                      cursor: "pointer",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "#111111",
-                    }}
-                  >
-                    {audio ? audio.name : "Click to browse or drop audio file (.mp3, .wav, .m4a)"}
-                  </label>
-                  {audio && (
-                    <span style={{ display: "block", fontSize: "11px", color: "#059669", marginTop: "4px" }}>
-                      File selected: {(audio.size / (1024 * 1024)).toFixed(2)} MB
+
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={audio ? "#059669" : "#6366f1"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+
+                    <span style={{ fontSize: "12px", fontWeight: 750, color: "#0f172a" }}>
+                      {audio ? audio.name : "Click to select or change audio file"}
                     </span>
-                  )}
+
+                    <span style={{ fontSize: "11px", color: "#64748b" }}>
+                      {audio
+                        ? `${(audio.size / (1024 * 1024)).toFixed(2)} MB ready to upload`
+                        : "Supports MP3, WAV, M4A, AAC, OGG up to 100MB"}
+                    </span>
+                  </div>
                 </div>
 
                 <button
                   onClick={handleUpload}
-                  disabled={actionLoading === "upload"}
+                  disabled={actionLoading === "upload" || !audio}
                   className="btn-primary"
-                  style={{ width: "100%" }}
+                  style={{
+                    width: "100%",
+                    opacity: !audio && actionLoading !== "upload" ? 0.65 : 1,
+                  }}
                 >
                   {actionLoading === "upload" ? "Uploading audio..." : "Upload Audio File"}
                 </button>
