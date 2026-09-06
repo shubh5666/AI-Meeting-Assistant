@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { loginUser } from "../services/authService";
+import api from "../services/api";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -31,6 +32,17 @@ function Login() {
     try {
       setLoading(true);
       await loginUser({ email, password });
+      
+      try {
+        const profRes = await api.get("/profile");
+        if (profRes.data?.name) {
+          localStorage.setItem("userName", profRes.data.name);
+          if (profRes.data.email) localStorage.setItem("userEmail", profRes.data.email);
+        }
+      } catch (profErr) {
+        console.log("Could not pre-cache profile:", profErr);
+      }
+
       setMessage("Login Successful");
 
       setTimeout(() => {

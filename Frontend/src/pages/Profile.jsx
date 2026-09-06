@@ -20,13 +20,18 @@ function Profile() {
     try {
       const response = await api.get("/profile");
       setUser(response.data);
+      if (response.data?.name) {
+        localStorage.setItem("userName", response.data.name);
+        if (response.data.email) localStorage.setItem("userEmail", response.data.email);
+      }
     } catch (error) {
       console.log(error);
       // Demo fallback if backend profile session expired
-      setUser({
-        name: "Shubh",
-        email: "shubh@workspace.ai",
-      });
+      const fallbackUser = {
+        name: localStorage.getItem("userName") || "Shubh",
+        email: localStorage.getItem("userEmail") || "shubh@workspace.ai",
+      };
+      setUser(fallbackUser);
     } finally {
       setLoading(false);
     }
